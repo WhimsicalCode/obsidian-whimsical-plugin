@@ -1,0 +1,10 @@
+{
+  "id": "whimsical",
+  "name": "Whimsical",
+  "version": "1.0.0",
+  "minAppVersion": "1.0.0",
+  "description": "Embed Whimsical boards in your notes.",
+  "author": "Whimsical",
+  "authorUrl": "https://whimsical.com",
+  "isDesktopOnly": true
+}
