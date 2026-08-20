@@ -1,8 +1,8 @@
 # 🟣 Whimsical for Obsidian
 
 Embed live [Whimsical](https://whimsical.com) boards in your Obsidian notes.
-Put a Whimsical link on its own line, switch to Reading view, and the board
-renders inline.
+Put a Whimsical link on its own line and the board renders inline — in
+Reading view and in Live Preview.
 
 ![Whimsical board rendering inline in Reading view](docs/whimsical-for-obsidian-demo.gif)
 
@@ -16,14 +16,16 @@ renders inline.
   private boards ask you to sign in to Whimsical first, right inside the
   note.
 
-> ⚠️ Boards appear in **Reading view**. In editing view, links stay plain
-> links.
+> ⚠️ Boards appear in **Reading view** and **Live Preview**. In Live
+> Preview, placing the cursor on the embed's line reveals the raw link for
+> editing (the board reloads when the cursor leaves the line). In Source
+> mode, links stay plain text.
 
 ## 🖱️ How to Use
 
-Copy a board's link from Whimsical, paste it on its own line in a note, and
-switch to Reading view. The link turns into the live board, matching your
-light or dark theme.
+Copy a board's link from Whimsical and paste it on its own line in a note.
+In Reading view and Live Preview the link turns into the live board,
+matching your light or dark theme.
 
 What works:
 
