@@ -9,6 +9,28 @@
  * This file must not import from "obsidian" itself.
  */
 
+import { StateEffect, StateField } from "@codemirror/state";
+
+/**
+ * Test-only control for the stubbed `editorLivePreviewField`: dispatch
+ * `setLivePreview.of(false)` to simulate switching to Source mode. The real
+ * Obsidian field is updated internally by the app; this stub defaults to
+ * Live Preview being on.
+ */
+export const setLivePreview = StateEffect.define<boolean>();
+
+export const editorLivePreviewField = StateField.define<boolean>({
+  create: () => true,
+  update(value, transaction) {
+    for (const effect of transaction.effects) {
+      if (effect.is(setLivePreview)) {
+        value = effect.value;
+      }
+    }
+    return value;
+  },
+});
+
 export type EventCallback = (...args: unknown[]) => void;
 
 export interface EventRef {
@@ -129,6 +151,8 @@ export class Plugin extends Component {
   readonly manifest: PluginManifest;
   /** Test helper: every processor handed to registerMarkdownPostProcessor. */
   readonly markdownPostProcessors: MarkdownPostProcessor[] = [];
+  /** Test helper: every extension handed to registerEditorExtension. */
+  readonly editorExtensions: unknown[] = [];
 
   constructor(app: App, manifest: PluginManifest) {
     super();
@@ -141,5 +165,9 @@ export class Plugin extends Component {
   ): MarkdownPostProcessor {
     this.markdownPostProcessors.push(processor);
     return processor;
+  }
+
+  registerEditorExtension(extension: unknown): void {
+    this.editorExtensions.push(extension);
   }
 }

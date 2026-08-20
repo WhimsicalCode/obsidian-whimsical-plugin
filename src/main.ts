@@ -4,6 +4,7 @@ import {
   type App,
   type MarkdownPostProcessorContext,
 } from "obsidian";
+import { whimsicalEditorExtension } from "./editor-embeds";
 import { mountEmbed, type EmbedView } from "./embed-view";
 import { findStandaloneWhimsicalLinks } from "./markdown-links";
 
@@ -42,7 +43,22 @@ class WhimsicalEmbedChild extends MarkdownRenderChild {
 }
 
 export default class WhimsicalEmbedsPlugin extends Plugin {
+  // Live Preview widgets outlive no plugin state of their own; they enroll
+  // here so one plugin-level css-change listener can theme-sync them all.
+  // (Reading-view embeds keep their per-child listener because their
+  // MarkdownRenderChild lifecycle already owns event registration.)
+  private readonly liveEmbeds = new Set<EmbedView>();
+
   onload(): void {
+    this.registerEditorExtension(whimsicalEditorExtension(this.liveEmbeds));
+    this.registerEvent(
+      this.app.workspace.on("css-change", () => {
+        for (const view of this.liveEmbeds) {
+          view.syncColorMode();
+        }
+      }),
+    );
+
     this.registerMarkdownPostProcessor(
       (el: HTMLElement, context: MarkdownPostProcessorContext) => {
         for (const { paragraph, origin, slug } of findStandaloneWhimsicalLinks(

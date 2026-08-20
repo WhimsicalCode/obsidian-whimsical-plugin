@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { EditorSelection, EditorState, type Extension } from "@codemirror/state";
+import { EditorView } from "@codemirror/view";
 import WhimsicalEmbedsPlugin from "../src/main";
+import { WhimsicalEmbedWidget } from "../src/editor-embeds";
 import {
+  editorLivePreviewField,
   Workspace,
   type App,
   type MarkdownPostProcessor,
@@ -24,6 +28,7 @@ interface LoadedPlugin {
   plugin: WhimsicalEmbedsPlugin;
   workspace: Workspace;
   postProcessors: MarkdownPostProcessor[];
+  editorExtensions: unknown[];
 }
 
 function loadPlugin(): LoadedPlugin {
@@ -39,8 +44,14 @@ function loadPlugin(): LoadedPlugin {
 
   plugin.load();
 
-  const { markdownPostProcessors } = plugin as unknown as StubPlugin;
-  return { plugin, workspace, postProcessors: markdownPostProcessors };
+  const { markdownPostProcessors, editorExtensions } =
+    plugin as unknown as StubPlugin;
+  return {
+    plugin,
+    workspace,
+    postProcessors: markdownPostProcessors,
+    editorExtensions,
+  };
 }
 
 function anchor(url: string, text: string): HTMLAnchorElement {
@@ -141,14 +152,16 @@ describe("WhimsicalEmbedsPlugin", () => {
     );
   });
 
-  it("registers exactly one css-change listener per loaded embed", () => {
+  it("adds one css-change listener per loaded embed on top of the plugin's own", () => {
     const { workspace, postProcessors } = loadPlugin();
+    expect(workspace.listenerCount("css-change")).toBe(1);
+
     const root = fragment(standaloneLink(URL_ONE, "Board"));
     const { context } = loadingContext([]);
 
     onlyProcessor(postProcessors)(root, context);
 
-    expect(workspace.listenerCount("css-change")).toBe(1);
+    expect(workspace.listenerCount("css-change")).toBe(2);
   });
 
   it("syncs the embed color mode when the workspace fires css-change", () => {
@@ -184,7 +197,7 @@ describe("WhimsicalEmbedsPlugin", () => {
     }
     child.unload();
 
-    expect(workspace.listenerCount("css-change")).toBe(0);
+    expect(workspace.listenerCount("css-change")).toBe(1);
     expect(container.childElementCount).toBe(0);
     expect(iframe.getAttribute("src")).toBe("about:blank");
   });
@@ -206,13 +219,13 @@ describe("WhimsicalEmbedsPlugin", () => {
       2,
     );
     expect(root.querySelectorAll("iframe")).toHaveLength(2);
-    expect(workspace.listenerCount("css-change")).toBe(2);
+    expect(workspace.listenerCount("css-change")).toBe(3);
 
     for (const child of children) {
       child.unload();
     }
 
-    expect(workspace.listenerCount("css-change")).toBe(0);
+    expect(workspace.listenerCount("css-change")).toBe(1);
   });
 
   it("leaves an inline link untouched", () => {
@@ -228,6 +241,88 @@ describe("WhimsicalEmbedsPlugin", () => {
     expect(addChildCalls()).toBe(0);
     expect(children).toHaveLength(0);
     expect(root.querySelector("iframe")).toBeNull();
-    expect(workspace.listenerCount("css-change")).toBe(0);
+    expect(workspace.listenerCount("css-change")).toBe(1);
+  });
+
+  it("registers exactly one editor extension on load", () => {
+    const { editorExtensions } = loadPlugin();
+
+    expect(editorExtensions).toHaveLength(1);
+  });
+
+  it("syncs a Live Preview widget's color mode through the plugin's css-change listener", () => {
+    const { workspace, editorExtensions } = loadPlugin();
+    const widget = onlyEditorWidget(editorExtensions);
+
+    const container = widget.toDOM(fakeEditorView());
+    const iframe = iframeIn(container);
+    expect(iframe.getAttribute("src")).toBe(
+      `https://whimsical.com/embed/${SLUG}?color-mode=light&login-mode=inline`,
+    );
+
+    document.body.classList.remove("theme-light");
+    document.body.classList.add("theme-dark");
+    workspace.trigger("css-change");
+
+    expect(iframe.getAttribute("src")).toBe(
+      `https://whimsical.com/embed/${SLUG}?color-mode=dark&login-mode=inline`,
+    );
+  });
+
+  it("stops syncing a Live Preview widget once it is destroyed", () => {
+    const { workspace, editorExtensions } = loadPlugin();
+    const widget = onlyEditorWidget(editorExtensions);
+    const container = widget.toDOM(fakeEditorView());
+    const iframe = iframeIn(container);
+
+    widget.destroy(container);
+
+    document.body.classList.remove("theme-light");
+    document.body.classList.add("theme-dark");
+    workspace.trigger("css-change");
+
+    expect(iframe.getAttribute("src")).toBe("about:blank");
   });
 });
+
+/**
+ * Builds an editor state over one standalone link with the plugin's
+ * registered extension and returns the single embed widget it produced.
+ */
+function onlyEditorWidget(editorExtensions: unknown[]): WhimsicalEmbedWidget {
+  const state = EditorState.create({
+    doc: `intro\n${URL_ONE}`,
+    selection: EditorSelection.cursor(0),
+    extensions: [
+      editorLivePreviewField,
+      ...(editorExtensions as Extension[]),
+    ],
+  });
+
+  const widgets: WhimsicalEmbedWidget[] = [];
+  for (const entry of state.facet(EditorView.decorations)) {
+    if (typeof entry === "function") {
+      continue;
+    }
+    const iter = entry.iter();
+    while (iter.value !== null) {
+      // Decoration.spec is typed `any` by CodeMirror; narrow it explicitly.
+      const spec = iter.value.spec as { widget?: unknown };
+      if (spec.widget instanceof WhimsicalEmbedWidget) {
+        widgets.push(spec.widget);
+      }
+      iter.next();
+    }
+  }
+
+  const widget = widgets[0];
+  if (widgets.length !== 1 || widget === undefined) {
+    throw new Error(`expected exactly one embed widget, got ${widgets.length}`);
+  }
+  return widget;
+}
+
+function fakeEditorView(): EditorView {
+  const dom = document.body.createDiv();
+  return { dom } as unknown as EditorView;
+}

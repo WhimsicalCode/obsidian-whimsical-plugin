@@ -32,6 +32,19 @@ export default tseslint.config(
   ...tseslint.configs.recommended.map(scopeToCode),
   ...obsidianmd.configs.recommended.map(scopeToCode),
   {
+    // prefer-create-el assumes Obsidian's DOM helpers exist; it only
+    // makes sense for plugin runtime code under src/. The test harness is
+    // exactly where they don't apply: test/setup.ts *implements* those
+    // helpers (it must call the raw DOM APIs), and test fixtures build the
+    // DOM shapes Obsidian's renderer would hand the plugin. Scoped off
+    // here in config because inline eslint-disable comments are rejected
+    // by Obsidian's plugin review.
+    files: ["test/**/*.ts"],
+    rules: {
+      "obsidianmd/prefer-create-el": "off",
+    },
+  },
+  {
     // Scoped to exactly the files tsconfig.json's `include` covers.
     // Root-level TS config files (vitest.config.ts, etc.) are intentionally
     // outside that program, so type-aware parserOptions.project must not be
