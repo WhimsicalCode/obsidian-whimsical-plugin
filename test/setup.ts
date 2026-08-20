@@ -3,9 +3,7 @@
  * injects these onto Node.prototype at runtime (obsidian.d.ts declares
  * them); only the semantics the plugin relies on are modelled: create in
  * the node's own document, apply cls/attr, append to the node.
- */
-/* eslint-disable obsidianmd/prefer-create-el -- this file implements createEl */
-// DomElementInfo is a global type declared by obsidian.d.ts (loaded into
+ */// DomElementInfo is a global type declared by obsidian.d.ts (loaded into
 // the program via the src imports of "obsidian").
 function applyInfo(el: HTMLElement, o?: DomElementInfo | string): void {
   const info = typeof o === "string" ? { cls: o } : (o ?? {});
