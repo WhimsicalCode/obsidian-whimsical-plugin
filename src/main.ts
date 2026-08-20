@@ -48,8 +48,12 @@ export default class WhimsicalEmbedsPlugin extends Plugin {
         for (const { paragraph, origin, slug } of findStandaloneWhimsicalLinks(
           el,
         )) {
-          const container = paragraph.ownerDocument.createElement("div");
-          container.classList.add("whimsical-embed-container");
+          // createDiv parents the div inside the paragraph only so it is
+          // created in the paragraph's own document (popout windows);
+          // replaceWith then swaps it into the paragraph's place.
+          const container = paragraph.createDiv({
+            cls: "whimsical-embed-container",
+          });
           paragraph.replaceWith(container);
           context.addChild(
             new WhimsicalEmbedChild(this.app, container, origin, slug),

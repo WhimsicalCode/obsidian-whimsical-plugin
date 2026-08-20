@@ -32,16 +32,17 @@ export function mountEmbed(
 
   let lastMode = getColorMode(doc);
 
-  const iframe = doc.createElement("iframe");
-  iframe.setAttribute("src", buildEmbedUrl(origin, slug, lastMode));
-  iframe.setAttribute("class", "whimsical-embed-frame");
-  iframe.setAttribute("title", "Whimsical board");
-  iframe.setAttribute("loading", "lazy");
-  iframe.setAttribute("allow", "fullscreen");
-  iframe.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
-  iframe.setAttribute("sandbox", SANDBOX_TOKENS);
-
-  container.appendChild(iframe);
+  const iframe = container.createEl("iframe", {
+    cls: "whimsical-embed-frame",
+    attr: {
+      src: buildEmbedUrl(origin, slug, lastMode),
+      title: "Whimsical board",
+      loading: "lazy",
+      allow: "fullscreen",
+      referrerpolicy: "strict-origin-when-cross-origin",
+      sandbox: SANDBOX_TOKENS,
+    },
+  });
 
   function syncColorMode(): void {
     const mode = getColorMode(doc);
